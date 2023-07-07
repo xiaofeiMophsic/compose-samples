@@ -495,6 +495,7 @@ fun ConversationPreview() {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Preview
 @Composable
 fun ChannelBarPrev() {
