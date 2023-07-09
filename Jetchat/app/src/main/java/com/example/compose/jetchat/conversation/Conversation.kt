@@ -127,7 +127,10 @@ fun ConversationContent(
             .exclude(WindowInsets.ime),
         modifier = modifier.nestedScroll(scrollBehavior.nestedScrollConnection)
     ) { paddingValues ->
-        Column(Modifier.fillMaxSize().padding(paddingValues)) {
+        Column(
+            Modifier
+                .fillMaxSize()
+                .padding(paddingValues)) {
             Messages(
                 messages = uiState.messages,
                 navigateToProfile = navigateToProfile,
@@ -147,7 +150,9 @@ fun ConversationContent(
                 },
                 // let this element handle the padding so that the elevation is shown behind the
                 // navigation bar
-                modifier = Modifier.navigationBarsPadding().imePadding()
+                modifier = Modifier
+                    .navigationBarsPadding()
+                    .imePadding()
             )
         }
     }
@@ -303,6 +308,18 @@ fun Message(
 
     val spaceBetweenAuthors = if (isLastMessageByAuthor) Modifier.padding(top = 8.dp) else Modifier
     Row(modifier = spaceBetweenAuthors) {
+        if (isUserMe) {
+            AuthorAndTextMessage(
+                msg = msg,
+                isUserMe = true,
+                isFirstMessageByAuthor = isFirstMessageByAuthor,
+                isLastMessageByAuthor = isLastMessageByAuthor,
+                authorClicked = onAuthorClick,
+                modifier = Modifier
+                    .padding(start = 16.dp)
+                    .weight(1f)
+            )
+        }
         if (isLastMessageByAuthor) {
             // Avatar
             Image(
@@ -322,16 +339,18 @@ fun Message(
             // Space under avatar
             Spacer(modifier = Modifier.width(74.dp))
         }
-        AuthorAndTextMessage(
-            msg = msg,
-            isUserMe = isUserMe,
-            isFirstMessageByAuthor = isFirstMessageByAuthor,
-            isLastMessageByAuthor = isLastMessageByAuthor,
-            authorClicked = onAuthorClick,
-            modifier = Modifier
-                .padding(end = 16.dp)
-                .weight(1f)
-        )
+        if (!isUserMe) {
+            AuthorAndTextMessage(
+                msg = msg,
+                isUserMe = false,
+                isFirstMessageByAuthor = isFirstMessageByAuthor,
+                isLastMessageByAuthor = isLastMessageByAuthor,
+                authorClicked = onAuthorClick,
+                modifier = Modifier
+                    .padding(end = 16.dp)
+                    .weight(1f)
+            )
+        }
     }
 }
 
@@ -344,9 +363,14 @@ fun AuthorAndTextMessage(
     authorClicked: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(modifier = modifier) {
+    val horizontalAlignment = if (isUserMe) Alignment.End else Alignment.Start
+    Column(modifier = modifier, horizontalAlignment = horizontalAlignment) {
         if (isLastMessageByAuthor) {
-            AuthorNameTimestamp(msg)
+            if (isUserMe) {
+                AuthorMeNameTimestamp(msg)
+            } else {
+                AuthorNameTimestamp(msg)
+            }
         }
         ChatItemBubble(msg, isUserMe, authorClicked = authorClicked)
         if (isFirstMessageByAuthor) {
@@ -380,7 +404,30 @@ private fun AuthorNameTimestamp(msg: Message) {
     }
 }
 
+@Composable
+private fun AuthorMeNameTimestamp(msg: Message) {
+    // Combine author and timestamp for a11y.
+    Row(modifier = Modifier.semantics(mergeDescendants = true) {}) {
+        Text(
+            text = msg.timestamp,
+            style = MaterialTheme.typography.bodySmall,
+            modifier = Modifier.alignBy(LastBaseline),
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(
+            text = msg.author,
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier
+                .alignBy(LastBaseline)
+                .paddingFrom(LastBaseline, after = 8.dp) // Space to 1st bubble
+        )
+    }
+}
+
 private val ChatBubbleShape = RoundedCornerShape(4.dp, 20.dp, 20.dp, 20.dp)
+
+private val ChatMeBubbleShape = RoundedCornerShape(20.dp, 4.dp, 20.dp, 20.dp)
 
 @Composable
 fun DayHeader(dayString: String) {
@@ -423,10 +470,12 @@ fun ChatItemBubble(
         MaterialTheme.colorScheme.surfaceVariant
     }
 
-    Column {
+    val backgroundShape = if (isUserMe) ChatMeBubbleShape else ChatBubbleShape
+    val alignment = if (isUserMe) Alignment.End else  Alignment.Start
+    Column(horizontalAlignment = alignment) {
         Surface(
             color = backgroundBubbleColor,
-            shape = ChatBubbleShape
+            shape = backgroundShape
         ) {
             ClickableMessage(
                 message = message,
@@ -439,7 +488,7 @@ fun ChatItemBubble(
             Spacer(modifier = Modifier.height(4.dp))
             Surface(
                 color = backgroundBubbleColor,
-                shape = ChatBubbleShape
+                shape = backgroundShape
             ) {
                 Image(
                     painter = painterResource(it),
